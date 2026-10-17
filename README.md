@@ -32,7 +32,7 @@ Use it by asking, for example "what's trending on GitHub this week?", or call th
 /trend-minions:trending monthly python developers
 ```
 
-The plugin used to be called `github-trending`. If you installed it under that name, `/plugin update` moves you to `trend-minions` automatically.
+The plugin used to be called `github-trending`. If you installed it under that name, run `/plugin marketplace update somefun`, then `/plugin install trend-minions@somefun` once. Claude Code moves your settings from the old name to the new one by itself.
 
 You can also run the scanner on its own, on any repo or local checkout:
 
