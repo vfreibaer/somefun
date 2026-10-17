@@ -8,7 +8,7 @@ Small, fun [Claude Code](https://claude.com/claude-code) plugins. This repo is a
 
 Shows what's trending on GitHub right now: the top repos (or developers) for today, this week or this month, optionally for one language or a topic such as "claude skills", plus a short read on the themes behind them. GitHub Trending has no topic filter, so for a topic the skill merges the trending pages for all languages and the languages where tools usually trend, keeps the repos whose name or description matches, and sorts them by stars gained.
 
-Every repo in the table gets a **Security** and a **Prompt injection** banana badge with a risk score, 🟢🍌 0–24%, 🟡🍌 25–59% or 🔴🍌 60–100%, and a **Safe for work (EU)** ✅ Yes or ⛔ No. A bundled scanner checks the files AI agents read and run and the repo's workflows, and never prints their contents. [The plugin's README](plugins/trend-minions/README.md) explains every check and everything the plugin fetches.
+Every repo in the table gets a **Security** and a **Prompt injection** banana with a risk score, ![green banana](plugins/trend-minions/assets/banana-green.svg) 0–24%, ![yellow banana](plugins/trend-minions/assets/banana-yellow.svg) 25–59% or ![red banana](plugins/trend-minions/assets/banana-red.svg) 60–100%, and a **Safe for work (EU)** ✅ Yes or ⛔ No. A bundled scanner checks the files AI agents read and run and the repo's workflows, and never prints their contents. [The plugin's README](plugins/trend-minions/README.md) explains every check and everything the plugin fetches.
 
 Install it:
 

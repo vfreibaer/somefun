@@ -81,15 +81,20 @@ Open with a title line that starts with the ✻ mark, then the period and date, 
 |--:|---|:-:|:-:|:-:|---|--:|--:|---|
 
 - Link each repo as `[owner/name](https://github.com/owner/name)`.
-- Security and Prompt injection: a banana badge and the percent, joined by a non-breaking space (U+00A0) so they never wrap apart. The badge is a colored dot followed by a banana, read as a green, yellow or red banana: 🟢🍌 for 0–24% (none or low), 🟡🍌 for 25–59% (medium), 🔴🍌 for 60–100% (high). For example `🟢🍌 0%`, `🟡🍌 37%`, `🔴🍌 72%`. Don't write the words None, Low, Medium or High in the table.
-- In Security, add the Scorecard score after the percent when there is one, such as `🟡🍌 37% · 6.4/10`; add the year when it is more than a year old, such as `6.4/10 (2022)`.
+- Security and Prompt injection: a banana image and the percent, joined by a non-breaking space (U+00A0) so they never wrap apart. Use exactly these three images; their alt text is what people see where images can't be displayed, such as in a terminal:
+  - 0–24% (none or low), a green banana: ![🟢🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-green.svg)
+  - 25–59% (medium), a yellow banana: ![🟡🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-yellow.svg)
+  - 60–100% (high), a red banana: ![🔴🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-red.svg)
+
+  A cell is the image, a non-breaking space and the percent, such as ![🟡🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-yellow.svg) 37%. Don't write the words None, Low, Medium or High in the table.
+- In Security, add the Scorecard score after the percent when there is one, such as 37% · 6.4/10; add the year when it is more than a year old, such as 6.4/10 (2022).
 - Safe for work (EU): `✅ Yes` or `⛔ No`, decided as below.
 - ★ total and ★ <period>: numbers with thousands separators; prefix the period gain with `+`, such as `+1,552`.
 - Leave out the language column when the page is filtered to one language.
 - Shorten descriptions to about 12 words. Keep names and claims as written; do not add claims of your own.
 - With `no-scan`, leave out the three check columns.
 
-Right under the table, put this legend on one line: `🟢🍌 0–24% · 🟡🍌 25–59% · 🔴🍌 60–100% risk score (not a probability) · ✅ / ⛔ safe for work (EU)`.
+Right under the table, put this legend on one line: ![🟢🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-green.svg) 0–24% · ![🟡🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-yellow.svg) 25–59% · ![🔴🍌](https://raw.githubusercontent.com/vfreibaer/somefun/main/plugins/trend-minions/assets/banana-red.svg) 60–100% risk score (not a probability) · ✅ / ⛔ safe for work (EU)
 
 **Developers**: a table with #, developer (linked), name, highlighted repo, the three check columns for that repo in the same style, and what it is.
 
@@ -105,7 +110,7 @@ Then add, in at most five bullets:
 - **Themes**: what several entries have in common (for example, AI agent tooling or Rust rewrites). Name only themes at least two entries share.
 - **Breakouts**: repos whose gain in the period is a large share of their total stars, which usually means they are new. Give the numbers.
 
-Then a **✻ Security check** section: one bullet for each repo with a 🔴🍌 in either column, most serious first, starting with its badge and percent, saying in plain words what was found and where, for example "Scrapling: its release workflow puts PR titles into a shell command (`.github/workflows/release-and-publish.yml:27`)". If no repo has a 🔴🍌, say so in one line and name the highest 🟡🍌 scores. Finish the section with one line: this is a pattern scan of the files agents read and run, not a full audit; 🔴🍌 means review before using the repo with an agent, not proof of bad intent; percentages are risk scores for comparing repos (more findings, higher score), not probabilities; security and prompt-injection research repos often trip it because they quote attacks.
+Then a **✻ Security check** section: one bullet for each repo with a red banana in either column, most serious first, starting with its banana image and percent, saying in plain words what was found and where, for example "Scrapling: its release workflow puts PR titles into a shell command (`.github/workflows/release-and-publish.yml:27`)". If no repo has a red banana, say so in one line and name the highest yellow-banana scores. Finish the section with one line: this is a pattern scan of the files agents read and run, not a full audit; a red banana means review before using the repo with an agent, not proof of bad intent; percentages are risk scores for comparing repos (more findings, higher score), not probabilities; security and prompt-injection research repos often trip it because they quote attacks.
 
 Then a **✻ Not safe for work (EU)** section: one ⛔ bullet per No with its reason, such as "owner/name: no license file (all rights reserved)" or "owner/name: its description says it unlocks paid features (getting around a paywall)"; group repos that share a license reason. If every repo is Yes, say so in one line. End with one line: this is a quick check of license and stated purpose, not legal advice.
 
