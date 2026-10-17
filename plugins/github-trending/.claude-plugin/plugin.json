@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "github-trending",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, by language or topic, with security and prompt-injection risk scores and a safe-for-work (EU) check of every repo listed.",
   "author": {
     "name": "vfreibaer",

@@ -73,23 +73,25 @@ If a repo shows `error`, or the scanner can't run at all (no Python or git, or t
 
 ## 4. Present it
 
-Open with one line naming what was fetched, for example: "GitHub Trending · Rust · this week (fetched <today's date>)" or "Claude skills trending on GitHub · this week (fetched <today's date>)". For a topic, follow it with one line on how the list was built (pages merged, filter, sort).
+Open with a title line that starts with the ✻ mark, then the period and date, for example "✻ **GitHub Trending · Rust** · this week · <today's date>" or "✻ **Claude skills trending on GitHub** · today · <today's date>". For a topic, follow it with one line on how the list was built (pages merged, filter, sort).
 
-**Repos**: a table in page order (for a topic, by stars gained in the period):
+**Repos**: a table in page order (for a topic, by stars gained in the period), with this header and alignment row:
 
 | # | Repo | Security | Prompt injection | Safe for work (EU) | Lang | ★ total | ★ <period> | What it is |
-|---|---|---|---|---|---|---|---|---|
+|--:|---|:-:|:-:|:-:|---|--:|--:|---|
 
 - Link each repo as `[owner/name](https://github.com/owner/name)`.
-- Security: the risk level and its percent, then the Scorecard score when there is one, such as "Medium (34%) · Scorecard 6.4/10"; add the year when the score is more than a year old, such as "6.4/10 (2022)".
-- Prompt injection: the risk level and its percent, such as "Low (5%)" or "None (0%)".
-- Write levels as High, Medium, Low or None, with High in bold.
-- Safe for work (EU): Yes or **No**, decided as below.
+- Security and Prompt injection: a traffic-light dot and the percent, joined by a non-breaking space (U+00A0) so they never wrap apart: 🟢 for 0–24% (none or low), 🟡 for 25–59% (medium), 🔴 for 60–100% (high). For example `🟢 0%`, `🟡 37%`, `🔴 72%`. Don't write the words None, Low, Medium or High in the table.
+- In Security, add the Scorecard score after the percent when there is one, such as `🟡 37% · 6.4/10`; add the year when it is more than a year old, such as `6.4/10 (2022)`.
+- Safe for work (EU): `✅ Yes` or `⛔ No`, decided as below.
+- ★ total and ★ <period>: numbers with thousands separators; prefix the period gain with `+`, such as `+1,552`.
 - Leave out the language column when the page is filtered to one language.
 - Shorten descriptions to about 12 words. Keep names and claims as written; do not add claims of your own.
 - With `no-scan`, leave out the three check columns.
 
-**Developers**: a table with #, developer (linked), name, highlighted repo, the three check columns for that repo, and what it is.
+Right under the table, put this legend on one line: `🟢 0–24% · 🟡 25–59% · 🔴 60–100% risk score (not a probability) · ✅ / ⛔ safe for work (EU)`.
+
+**Developers**: a table with #, developer (linked), name, highlighted repo, the three check columns for that repo in the same style, and what it is.
 
 **Safe for work (EU)** means fine to use at work in Europe. It is Yes only if both hold:
 
@@ -103,8 +105,8 @@ Then add, in at most five bullets:
 - **Themes**: what several entries have in common (for example, AI agent tooling or Rust rewrites). Name only themes at least two entries share.
 - **Breakouts**: repos whose gain in the period is a large share of their total stars, which usually means they are new. Give the numbers.
 
-Then a **Security check** section: one bullet for each repo rated High in either column, most serious first, saying in plain words what was found and where, for example "Scrapling: its release workflow puts PR titles into a shell command (`.github/workflows/release-and-publish.yml:27`)". If no repo is High, say so in one line. Finish the section with one line: this is a pattern scan of the files agents read and run, not a full audit; High means review before using the repo with an agent, not proof of bad intent; percentages are risk scores for comparing repos (more findings, higher score), not probabilities; security and prompt-injection research repos often trip it because they quote attacks.
+Then a **✻ Security check** section: one bullet for each repo with a 🔴 in either column, most serious first, starting with its dot and percent, saying in plain words what was found and where, for example "Scrapling: its release workflow puts PR titles into a shell command (`.github/workflows/release-and-publish.yml:27`)". If no repo has a 🔴, say so in one line and name the highest 🟡 scores. Finish the section with one line: this is a pattern scan of the files agents read and run, not a full audit; 🔴 means review before using the repo with an agent, not proof of bad intent; percentages are risk scores for comparing repos (more findings, higher score), not probabilities; security and prompt-injection research repos often trip it because they quote attacks.
 
-Then a **Not safe for work (EU)** section: one bullet per No with its reason, such as "owner/name: no license file (all rights reserved)" or "owner/name: its description says it unlocks paid features (getting around a paywall)"; group repos that share a license reason. If every repo is Yes, say so in one line. End with one line: this is a quick check of license and stated purpose, not legal advice.
+Then a **✻ Not safe for work (EU)** section: one ⛔ bullet per No with its reason, such as "owner/name: no license file (all rights reserved)" or "owner/name: its description says it unlocks paid features (getting around a paywall)"; group repos that share a license reason. If every repo is Yes, say so in one line. End with one line: this is a quick check of license and stated purpose, not legal advice.
 
 Keep the whole answer short enough to read in under two minutes. End with the source URL.
