@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "github-trending",
-  "version": "0.4.0",
-  "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, filtered by language, with a security and prompt-injection check of every repo listed.",
+  "version": "0.5.0",
+  "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, by language or topic, with security and prompt-injection risk scores and a safe-for-work (EU) check of every repo listed.",
   "author": {
     "name": "vfreibaer",
     "url": "https://github.com/vfreibaer"
@@ -15,6 +15,7 @@
     "open-source",
     "discovery",
     "security",
-    "prompt-injection"
+    "prompt-injection",
+    "license"
   ]
 }

@@ -63,6 +63,7 @@ It prints a JSON list with, for each repo:
 
 - `scorecard`: the [OpenSSF Scorecard](https://scorecard.dev) score (0 to 10) and its date, or `not scored`. Most new repos are not scored.
 - `security_policy`: whether the repo has a SECURITY.md.
+- `license`: the license ids found in the repo's root license files (`[]` when there are none) and `commercial_use`: `true` for open-source licenses, `"restricted"` for source-available ones (BUSL, SSPL, Elastic), `false` for non-commercial licenses or no license (all rights reserved), `null` when unrecognised.
 - `security`: risk (`high`, `medium`, `low`, `none`) and top findings for code, settings and workflows that can do harm: CI workflows that run untrusted PR or issue text, settings or hooks that pre-approve commands or turn off permission checks, credentials sent over the network, downloaded scripts piped into a shell, reverse shells, destructive commands.
 - `injection`: the same for text that steers an AI: hidden Unicode, hidden HTML comments with instructions, text telling the model to ignore its instructions, hide things from the user or act without asking, fake chat delimiters, AI agents in CI that read issues anyone can write.
 
@@ -76,17 +77,26 @@ Open with one line naming what was fetched, for example: "GitHub Trending · Rus
 
 **Repos**: a table in page order (for a topic, by stars gained in the period):
 
-| # | Repo | Lang | ★ total | ★ <period> | What it is | Security | Prompt injection |
-|---|---|---|---|---|---|---|---|
+| # | Repo | Security | Prompt injection | Safe for work (EU) | Lang | ★ total | ★ <period> | What it is |
+|---|---|---|---|---|---|---|---|---|
 
 - Link each repo as `[owner/name](https://github.com/owner/name)`.
-- Shorten descriptions to about 12 words. Keep names and claims as written; do not add claims of your own.
-- Leave out the language column when the page is filtered to one language.
 - Security: the risk level and its percent, then the Scorecard score when there is one, such as "Medium (34%) · Scorecard 6.4/10"; add the year when the score is more than a year old, such as "6.4/10 (2022)".
 - Prompt injection: the risk level and its percent, such as "Low (5%)" or "None (0%)".
 - Write levels as High, Medium, Low or None, with High in bold.
+- Safe for work (EU): Yes or **No**, decided as below.
+- Leave out the language column when the page is filtered to one language.
+- Shorten descriptions to about 12 words. Keep names and claims as written; do not add claims of your own.
+- With `no-scan`, leave out the three check columns.
 
-**Developers**: a table with #, developer (linked), name, highlighted repo, what it is, and the two check columns for that repo.
+**Developers**: a table with #, developer (linked), name, highlighted repo, the three check columns for that repo, and what it is.
+
+**Safe for work (EU)** means fine to use at work in Europe. It is Yes only if both hold:
+
+1. The license allows use at work: `commercial_use` is `true`. No license file (all rights reserved), a non-commercial license, a source-available license with conditions (`restricted`) or an unrecognised one is No.
+2. Nothing on the page says the project is for any of these: adult or explicit content; piracy, or getting around copy protection, DRM, paywalls, download limits or terms of service (EU copyright rules); cheats or cracks; malware, or attacking systems you don't own; collecting or scraping personal data, or tracking or surveilling people (GDPR); practices the EU AI Act prohibits, such as social scoring, emotion recognition at work or in schools, untargeted scraping of face images, or manipulating people.
+
+Judge point 2 only from the name and description on the page, never from memory. Dual-use tools (reverse engineering, security testing, web scraping, voice or image generation) are Yes unless the description points them at one of those uses.
 
 Then add, in at most five bullets:
 
@@ -94,5 +104,7 @@ Then add, in at most five bullets:
 - **Breakouts**: repos whose gain in the period is a large share of their total stars, which usually means they are new. Give the numbers.
 
 Then a **Security check** section: one bullet for each repo rated High in either column, most serious first, saying in plain words what was found and where, for example "Scrapling: its release workflow puts PR titles into a shell command (`.github/workflows/release-and-publish.yml:27`)". If no repo is High, say so in one line. Finish the section with one line: this is a pattern scan of the files agents read and run, not a full audit; High means review before using the repo with an agent, not proof of bad intent; percentages are risk scores for comparing repos (more findings, higher score), not probabilities; security and prompt-injection research repos often trip it because they quote attacks.
+
+Then a **Not safe for work (EU)** section: one bullet per No with its reason, such as "owner/name: no license file (all rights reserved)" or "owner/name: its description says it unlocks paid features (getting around a paywall)"; group repos that share a license reason. If every repo is Yes, say so in one line. End with one line: this is a quick check of license and stated purpose, not legal advice.
 
 Keep the whole answer short enough to read in under two minutes. End with the source URL.

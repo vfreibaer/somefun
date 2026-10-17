@@ -13,6 +13,10 @@ Every repo it lists also gets a **security** and a **prompt-injection** rating (
 - **Security**: workflows that put untrusted PR or issue text into commands, settings or hooks that pre-approve any shell command or turn off permission checks, credentials sent over the network, downloaded scripts piped into a shell, reverse shells, destructive commands. Also shows the [OpenSSF Scorecard](https://scorecard.dev) score where one exists, and whether there is a `SECURITY.md`.
 - **Prompt injection**: hidden Unicode, hidden HTML comments with instructions for an AI, text telling the model to ignore its instructions, hide things from the user or act without asking, fake chat delimiters, AI agents in CI that read issues anyone can write.
 
+A **Safe for work (EU)** column says Yes or No: Yes only when the repo's license allows use at work (an open-source license; no license, non-commercial and source-available licenses are No) and its description isn't aimed at adult content, piracy or getting around copy protection and terms of service, cheats, malware, collecting personal data or surveillance (GDPR), or practices the EU AI Act prohibits. Every No comes with its reason. It's a quick check, not legal advice.
+
+The table lists Security, Prompt injection and Safe for work (EU) first, then language, stars and description.
+
 The scanner downloads only those files (a git partial clone), takes about 10 to 30 seconds for a full trending page, and never prints file contents, so untrusted text doesn't reach the agent. It's a pattern scan, not an audit: High means "review before using this with an agent", not proof of bad intent. It needs Python 3.8+ and git 2.25+. Say `no-scan` to get just the list.
 
 Install it:
