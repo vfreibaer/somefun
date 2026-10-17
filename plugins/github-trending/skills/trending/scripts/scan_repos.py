@@ -510,10 +510,31 @@ def check(target, local, args):
     for category in CATEGORIES:
         found = [f for f in findings if f["category"] == category]
         counts = {s: sum(1 for f in found if f["severity"] == s) for s in SEVERITIES}
-        result[category] = {"risk": next((s for s in SEVERITIES if counts[s]), "none"), "counts": counts,
+        result[category] = {"risk": next((s for s in SEVERITIES if counts[s]), "none"),
+                            "percent": risk_percent(counts), "counts": counts,
                             "findings": found[:args.max_findings],
                             "more_findings": max(0, len(found) - args.max_findings)}
     return result
+
+
+# Each risk level owns a band, so the percentage never contradicts the level.
+PERCENT_BANDS = {"high": (60, 100), "medium": (25, 59), "low": (5, 24)}
+
+
+def risk_percent(counts):
+    """A 0-100 risk score: 0 with no findings, else inside the band of the worst level.
+
+    One finding at the worst level sits at the bottom of the band; each further one moves it
+    up with diminishing steps. Findings one and two levels lower count 0.3 and 0.1. It is a
+    score for comparing repos, not a probability that a repo is malicious.
+    """
+    levels = [s for s in SEVERITIES if counts[s]]
+    if not levels:
+        return 0
+    top = SEVERITIES.index(levels[0])
+    weighted = sum(counts[s] * w for s, w in zip(SEVERITIES[top:], (1, 0.3, 0.1)))
+    low, high = PERCENT_BANDS[SEVERITIES[top]]
+    return round(low + (high - low) * (1 - 0.7 ** (weighted - 1)))
 
 
 # ---------------------------------------------------------------------------
@@ -539,8 +560,8 @@ def format_text(results):
         for category, label in (("security", "Security"), ("injection", "Prompt injection")):
             group = r[category]
             c = group["counts"]
-            lines.append("  %s risk: %s (%d high, %d medium, %d low)" % (
-                label, group["risk"], c["high"], c["medium"], c["low"]))
+            lines.append("  %s risk: %s %d%% (%d high, %d medium, %d low)" % (
+                label, group["risk"], group["percent"], c["high"], c["medium"], c["low"]))
             for f in group["findings"]:
                 lines.append("    %-6s %-28s %s:%d%s  %s" % (
                     f["severity"], f["rule"], f["file"], f["line"],
