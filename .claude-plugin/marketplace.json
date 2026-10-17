@@ -12,7 +12,7 @@
     {
       "name": "trend-minions",
       "source": "./plugins/trend-minions",
-      "description": "See what's trending on GitHub right now, with green, yellow and red banana risk badges for security and prompt injection and a safe-for-work (EU) check of every repo listed.",
+      "description": "See what's trending on GitHub right now, with traffic-light risk scores for security and prompt injection and a safe-for-work (EU) check of every repo listed.",
       "category": "productivity"
     }
   ],
