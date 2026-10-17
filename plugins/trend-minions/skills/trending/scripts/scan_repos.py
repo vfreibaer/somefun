@@ -66,6 +66,7 @@ AGENT_DIRS = {
     ".claude", ".claude-plugin", ".cursor", ".windsurf", ".clinerules", ".codex", ".gemini",
 }
 CONFIG_FILENAMES = {".mcp.json", "mcp.json", "hooks.json", "claude_desktop_config.json"}
+LOCKFILES = {"package-lock.json", "npm-shrinkwrap.json"}
 CONFIG_DIRS = {".claude", ".claude-plugin", ".cursor", ".codex", ".gemini"}
 SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".py", ".js", ".mjs", ".cjs", ".ts")
 ROOT_SCRIPTS = {"install.sh", "setup.sh", "bootstrap.sh", "install.ps1", "get.sh"}
@@ -88,6 +89,10 @@ def classify(path):
     if dirs[:2] == [".github", "workflows"] and name.endswith((".yml", ".yaml")):
         return "workflow"
     if name in CONFIG_FILENAMES or (name.endswith(".json") and CONFIG_DIRS.intersection(dirs)):
+        return "config"
+    # Hook settings often have their own names, such as hooks/claude-codex-hooks.json or
+    # cursor-hooks.json; the commands in them run automatically.
+    if name.endswith(".json") and ("hooks" in dirs or name.endswith("hooks.json")) and name not in LOCKFILES:
         return "config"
     if name in AGENT_FILENAMES or name.endswith(AGENT_SUFFIXES):
         return "agent"
