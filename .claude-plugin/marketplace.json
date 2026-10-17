@@ -12,7 +12,7 @@
     {
       "name": "github-trending",
       "source": "./plugins/github-trending",
-      "description": "See what's trending on GitHub right now: top repos or developers by period and language, with the themes behind them.",
+      "description": "See what's trending on GitHub right now, with a security and prompt-injection check of every repo listed.",
       "category": "productivity"
     }
   ]
