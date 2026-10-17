@@ -1,4 +1,4 @@
-"""Tests for scan_repos.py. Run: python3 -m unittest discover -s plugins/github-trending/tests"""
+"""Tests for scan_repos.py. Run: python3 -m unittest discover -s tests"""
 
 import argparse
 import contextlib
@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SCRIPT = os.path.join(HERE, "..", "skills", "trending", "scripts", "scan_repos.py")
+SCRIPT = os.path.join(HERE, "..", "plugins", "trend-minions", "skills", "trending", "scripts", "scan_repos.py")
 spec = importlib.util.spec_from_file_location("scan_repos", SCRIPT)
 scan_repos = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scan_repos)
