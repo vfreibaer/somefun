@@ -1,7 +1,7 @@
 ---
 name: trending
-description: Show what's trending on GitHub right now, with a security and prompt-injection check of every repo listed. Use when the user asks what's trending or popular on GitHub, for hot or rising repos or developers, or for trending projects in a language or period ("trending Rust repos this week", "what's hot on GitHub today", "top trending developers this month").
-argument-hint: "[daily|weekly|monthly] [language] [developers] [no-scan]"
+description: Show what's trending on GitHub right now, with a security and prompt-injection check of every repo listed. Use when the user asks what's trending or popular on GitHub, for hot or rising repos or developers, or for trending projects in a language, topic or period ("trending Rust repos this week", "weekly trending Claude skills", "what's hot on GitHub today", "top trending developers this month").
+argument-hint: "[daily|weekly|monthly] [language] [topic] [developers] [no-scan]"
 ---
 
 # GitHub Trending
@@ -16,6 +16,7 @@ Read `$ARGUMENTS` and the user's request:
 
 - **Period**: `daily` (default), `weekly` or `monthly`. Map "today" to daily, "this week" to weekly, "this month" to monthly.
 - **Language** (optional): GitHub's URL slug, lowercase with spaces as `-` (`python`, `typescript`, `rust`, `jupyter-notebook`). Encode `#` as `%23` (`c%23`, `f%23`); `c++` stays as is.
+- **Topic** (optional): any other subject, such as "claude skills", "mcp servers" or "game engines". GitHub Trending can't filter by topic, so step 2 merges several pages and filters them.
 - **Developers**: only when the user asks for developers or people instead of repos.
 - **Spoken language** (optional): an ISO 639-1 code such as `de`, only when the user asks for it.
 - **Check**: on by default. Skip step 3 only for `no-scan` or when the user asks for just the list.
@@ -40,6 +41,14 @@ If WebFetch is not available or fails, fetch the URL with `curl -sL` and read th
 
 If the page has no entries (GitHub shows "It looks like we don't have any trending repositories"), say so and suggest a longer period or dropping the language filter.
 
+**For a topic**, fetch these pages in parallel: the one for the language the user named, or else the all-languages page plus `python`, `typescript`, `javascript` and `shell` (where tools, agent skills and plugins usually trend), unless the topic points to other languages. Then:
+
+- Merge them and drop duplicates.
+- Keep only repos whose name or description on the page says they match the topic, counting close synonyms. For "claude skills", that means skills or plugins for Claude Code or for coding agents in general (agent skills, `SKILL.md`). Never include a repo because of what you remember about it.
+- Sort by stars gained in the period, highest first.
+- Note which pages were merged, any that were empty, and in one line the closest near misses you left out and why.
+- If nothing matches, say so and suggest a longer period.
+
 ## 3. Check every repo
 
 Run the bundled scanner once, with every listed repo as `owner/name` exactly as on the page (for developers, their highlighted repos):
@@ -63,9 +72,9 @@ If a repo shows `error`, or the scanner can't run at all (no Python or git, or t
 
 ## 4. Present it
 
-Open with one line naming what was fetched, for example: "GitHub Trending · Rust · this week (fetched <today's date>)".
+Open with one line naming what was fetched, for example: "GitHub Trending · Rust · this week (fetched <today's date>)" or "Claude skills trending on GitHub · this week (fetched <today's date>)". For a topic, follow it with one line on how the list was built (pages merged, filter, sort).
 
-**Repos**: a table in page order:
+**Repos**: a table in page order (for a topic, by stars gained in the period):
 
 | # | Repo | Lang | ★ total | ★ <period> | What it is | Security | Prompt injection |
 |---|---|---|---|---|---|---|---|
