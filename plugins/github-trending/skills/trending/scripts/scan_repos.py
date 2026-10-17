@@ -8,6 +8,7 @@ Usage:
 For each repository it reports:
   - its OpenSSF Scorecard score (https://scorecard.dev), if it has been scored,
     and whether it has a SECURITY.md
+  - its license, and whether that license allows use at work (commercial use)
   - a static scan of the files AI agents read or run (skills, agent
     instructions, hooks, MCP and agent settings, the README, install scripts)
     and of its GitHub Actions workflows, with findings in two groups:
@@ -68,7 +69,8 @@ CONFIG_FILENAMES = {".mcp.json", "mcp.json", "hooks.json", "claude_desktop_confi
 CONFIG_DIRS = {".claude", ".claude-plugin", ".cursor", ".codex", ".gemini"}
 SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".py", ".js", ".mjs", ".cjs", ".ts")
 ROOT_SCRIPTS = {"install.sh", "setup.sh", "bootstrap.sh", "install.ps1", "get.sh"}
-KIND_ORDER = ("config", "agent", "workflow", "script", "readme")
+KIND_ORDER = ("license", "config", "agent", "workflow", "script", "readme")
+LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|unlicense)([-._][\w.-]*)?$")
 TEST_DIRS = {"test", "tests", "__tests__", "spec", "specs", "fixtures", "testdata", "__fixtures__"}
 TEST_FILE = re.compile(r"(\.|_)(test|spec)\.[a-z]+$|^test_.*\.py$")
 
@@ -81,6 +83,8 @@ def classify(path):
     # Tests and fixtures quote attacks on purpose; agents don't load them.
     if TEST_DIRS.intersection(dirs) or TEST_FILE.search(name):
         return None
+    if not dirs and LICENSE_FILE.match(name):
+        return "license"
     if dirs[:2] == [".github", "workflows"] and name.endswith((".yml", ".yaml")):
         return "workflow"
     if name in CONFIG_FILENAMES or (name.endswith(".json") and CONFIG_DIRS.intersection(dirs)):
@@ -498,22 +502,113 @@ def check(target, local, args):
             root = os.path.join(tmp, "repo")
             paths, files, truncated = fetch_remote(slug, root, args.timeout)
         findings = scan_tree(root, files, args.snippets)
+        result["license"] = detect_license(root, [path for path, kind in files if kind == "license"])
     except (RuntimeError, OSError, subprocess.SubprocessError) as e:
         result["error"] = "could not fetch: %s" % e
         return result
     finally:
         if tmp:
             remove_tree(tmp)
-    result["files_scanned"] = len(files)
+    result["files_scanned"] = sum(1 for _, kind in files if kind != "license")
     result["truncated"] = truncated
     result["security_policy"] = any(p.lower() in SECURITY_POLICY_FILES for p in paths)
     for category in CATEGORIES:
         found = [f for f in findings if f["category"] == category]
         counts = {s: sum(1 for f in found if f["severity"] == s) for s in SEVERITIES}
-        result[category] = {"risk": next((s for s in SEVERITIES if counts[s]), "none"), "counts": counts,
+        result[category] = {"risk": next((s for s in SEVERITIES if counts[s]), "none"),
+                            "percent": risk_percent(counts), "counts": counts,
                             "findings": found[:args.max_findings],
                             "more_findings": max(0, len(found) - args.max_findings)}
     return result
+
+
+# Each risk level owns a band, so the percentage never contradicts the level.
+PERCENT_BANDS = {"high": (60, 100), "medium": (25, 59), "low": (5, 24)}
+
+
+def risk_percent(counts):
+    """A 0-100 risk score: 0 with no findings, else inside the band of the worst level.
+
+    One finding at the worst level sits at the bottom of the band; each further one moves it
+    up with diminishing steps. Findings one and two levels lower count 0.3 and 0.1. It is a
+    score for comparing repos, not a probability that a repo is malicious.
+    """
+    levels = [s for s in SEVERITIES if counts[s]]
+    if not levels:
+        return 0
+    top = SEVERITIES.index(levels[0])
+    weighted = sum(counts[s] * w for s, w in zip(SEVERITIES[top:], (1, 0.3, 0.1)))
+    low, high = PERCENT_BANDS[SEVERITIES[top]]
+    return round(low + (high - low) * (1 - 0.7 ** (weighted - 1)))
+
+
+# ---------------------------------------------------------------------------
+# License: whether the repository may be used at work. commercial_use is True for open-source
+# licenses, "restricted" for source-available ones with conditions on commercial use, False for
+# non-commercial licenses or no license at all (all rights reserved), None when unrecognised.
+# Checked in order: source-available licenses first (BUSL names its future open-source
+# license), then open-source ones (GPLv2 itself mentions "noncommercial distribution"), and
+# non-commercial terms last. GNU licenses are named by the title at the top, since their texts
+# mention one another (GPLv2 ends by recommending the Library GPL).
+
+LICENSES = [
+    ("BUSL-1.1", r"Business Source License", "restricted"),
+    ("SSPL-1.0", r"Server Side Public License", "restricted"),
+    ("Elastic-2.0", r"\bElastic License\b", "restricted"),
+    ("AGPL", r"\A[\s\S]{0,300}GNU AFFERO GENERAL PUBLIC LICENSE", True),
+    ("LGPL", r"\A[\s\S]{0,300}GNU (LESSER|LIBRARY) GENERAL PUBLIC LICENSE", True),
+    ("GPL", r"\A[\s\S]{0,300}GNU GENERAL PUBLIC LICENSE", True),
+    ("MPL-2.0", r"Mozilla Public License", True),
+    ("EPL-2.0", r"Eclipse Public License", True),
+    ("Apache-2.0", r"Apache License,?\s+Version 2\.0", True),
+    ("MIT", r"Permission is hereby granted, free of charge", True),
+    ("ISC", r"Permission to use, copy, modify, and(/or)? distribute this software for any\s+purpose", True),
+    ("BSD-3-Clause", r"Redistribution and use in source and binary forms[\s\S]*Neither the name", True),
+    ("BSD-2-Clause", r"Redistribution and use in source and binary forms", True),
+    ("Unlicense", r"free and unencumbered software released into the public domain", True),
+    ("CC0-1.0", r"\bCC0 1\.0\b|Creative Commons Zero", True),
+    ("CC-BY-4.0", r"Attribution(-ShareAlike)? 4\.0 International", True),
+    ("BSL-1.0", r"Boost Software License", True),
+    ("Zlib", r"This software is provided ['‘]as-is['’], without any express or implied", True),
+    ("Non-commercial", r"\bnon-?commercial\b|\bBY-NC\b|personal use only|not for commercial use", False),
+]
+LICENSES = [(spdx, re.compile(pattern, re.IGNORECASE), use) for spdx, pattern, use in LICENSES]
+
+
+def classify_license(text):
+    for spdx, pattern, use in LICENSES:
+        if pattern.search(text):
+            if spdx in ("AGPL", "LGPL", "GPL"):
+                version = re.search(r"Version (\d)(\.\d)?", text)
+                if version:
+                    spdx += "-%s%s" % (version.group(1), version.group(2) or ".0")
+            return spdx, use
+    return "unknown", None
+
+
+def detect_license(root, license_files):
+    """Classify the repository's root license files. Several (MIT plus Apache-2.0) mean a choice."""
+    found = []
+    for rel in license_files:
+        full = os.path.join(root, rel)
+        try:
+            if os.path.islink(full) or os.path.getsize(full) > MAX_FILE_BYTES:
+                continue
+            with open(full, "rb") as f:
+                text = f.read().decode("utf-8", errors="replace")
+        except OSError:
+            continue
+        found.append(classify_license(text))
+    if not found:
+        return {"ids": [], "commercial_use": False, "note": "no license file: all rights reserved"}
+    uses = [use for _, use in found]
+    for best in (True, "restricted", False):
+        if best in uses:
+            use = best
+            break
+    else:
+        use = None
+    return {"ids": sorted({spdx for spdx, _ in found}), "commercial_use": use}
 
 
 # ---------------------------------------------------------------------------
@@ -533,14 +628,16 @@ def format_text(results):
                 score += " weak: " + ", ".join(sc["weak_checks"])
         else:
             score = "Scorecard " + sc["status"] + (": " + sc["error"] if sc.get("error") else "")
-        lines.append("%s  %s  SECURITY.md: %s  (%d files scanned%s)" % (
-            head, score, "yes" if r["security_policy"] else "no", r["files_scanned"],
-            ", capped" if r["truncated"] else ""))
+        lic = r["license"]
+        lines.append("%s  %s  SECURITY.md: %s  License: %s (commercial use: %s)  (%d files scanned%s)" % (
+            head, score, "yes" if r["security_policy"] else "no", " OR ".join(lic["ids"]) or "none",
+            {True: "yes", False: "no", "restricted": "restricted", None: "unknown"}[lic["commercial_use"]],
+            r["files_scanned"], ", capped" if r["truncated"] else ""))
         for category, label in (("security", "Security"), ("injection", "Prompt injection")):
             group = r[category]
             c = group["counts"]
-            lines.append("  %s risk: %s (%d high, %d medium, %d low)" % (
-                label, group["risk"], c["high"], c["medium"], c["low"]))
+            lines.append("  %s risk: %s %d%% (%d high, %d medium, %d low)" % (
+                label, group["risk"], group["percent"], c["high"], c["medium"], c["low"]))
             for f in group["findings"]:
                 lines.append("    %-6s %-28s %s:%d%s  %s" % (
                     f["severity"], f["rule"], f["file"], f["line"],
