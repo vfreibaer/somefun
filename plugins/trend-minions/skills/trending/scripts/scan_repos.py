@@ -498,7 +498,7 @@ def check(target, local, args):
             paths = list_local(root)
             files, truncated = select_files(paths)
         else:
-            tmp = tempfile.mkdtemp(prefix="gh-trending-scan-")
+            tmp = tempfile.mkdtemp(prefix="trend-minions-scan-")
             root = os.path.join(tmp, "repo")
             paths, files, truncated = fetch_remote(slug, root, args.timeout)
         findings = scan_tree(root, files, args.snippets)

@@ -1,13 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
-  "name": "github-trending",
-  "version": "0.6.0",
+  "name": "trend-minions",
+  "displayName": "Trend Minions",
+  "version": "0.7.0",
   "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, by language or topic, with security and prompt-injection risk scores and a safe-for-work (EU) check of every repo listed.",
   "author": {
     "name": "vfreibaer",
     "url": "https://github.com/vfreibaer"
   },
-  "homepage": "https://github.com/vfreibaer/somefun/tree/main/plugins/github-trending",
+  "homepage": "https://github.com/vfreibaer/somefun/tree/main/plugins/trend-minions",
   "repository": "https://github.com/vfreibaer/somefun",
   "keywords": [
     "github",
@@ -17,5 +18,6 @@
     "security",
     "prompt-injection",
     "license"
-  ]
+  ],
+  "license": "MIT"
 }
