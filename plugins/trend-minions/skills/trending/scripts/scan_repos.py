@@ -135,6 +135,8 @@ def looks_like_example(line, m):
 
 
 ALL_TEXT = ("agent", "config", "script", "readme", "workflow")
+# /dev/tcp or /dev/udp to a remote host with a numeric port.
+REMOTE_DEV_TCP = r"/dev/(tcp|udp)/(?!127\.|localhost\b|0\.0\.0\.0\b)[\w.-]*\w[\w.-]*/\d+"
 
 LINE_RULES = [
     rule("hidden-unicode-tags", "Invisible Unicode tag characters (text a model reads but people can't see)",
@@ -192,9 +194,18 @@ LINE_RULES = [
     rule("base64-exec", "Decodes base64 and runs it",
          r"base64\s+(-d|--decode)\b[^\n]{0,200}\|\s*(sudo\s+)?(ba|z)?sh\b|frombase64string\([^\n]{0,200}\|\s*iex\b",
          {"agent": "high", "config": "high", "script": "high", "readme": "medium", "workflow": "medium"}),
-    rule("reverse-shell", "Reverse shell pattern",
-         r"/dev/tcp/[\w.-]+/\d+|\bnc(at)?\s+(-\w*\s+)*-\w*[ec]\b|\bsocat\b[^\n]{0,200}\bexec:",
-         dict.fromkeys(ALL_TEXT, "high")),
+    # An interactive shell wired to a network connection. /dev/tcp on its own is also how
+    # scripts check whether a port is open, so it counts only with a shell, a remote host and
+    # a real port, never for localhost or a placeholder such as /dev/tcp/....
+    rule("reverse-shell", "Reverse shell: hands a shell to a remote host",
+         r"\b(ba|z|k|da)?sh\s+-i\b[^\n]{0,40}" + REMOTE_DEV_TCP
+         + r"|" + REMOTE_DEV_TCP + r"[^\n]{0,40}\b0>&1"
+         + r"|\|\s*(/usr)?(/bin/)?(ba|z|da)?sh\s+-i\b[^\n]{0,60}\|\s*(nc|ncat|netcat|telnet)\b"
+         + r"|\b(nc|ncat|netcat)\b[^\n]{0,80}\s-[a-z]*[ec]\s*['\"]?(/usr)?(/bin/)?((ba|z|k|da)?sh|cmd(\.exe)?|powershell)\b"
+         + r"|\bsocat\b(?=[^\n]{0,300}\btcp)(?=[^\n]{0,300}\bexec:['\"]?(/usr)?(/bin/)?(ba|z|da)?sh\b)"
+         + r"|\bos\.dup2\(\s*\w+\.fileno\(\)\s*,\s*0\s*\)"
+         + r"|\bTCPClient\([^\n]{0,400}\b(iex|invoke-expression)\b",
+         dict.fromkeys(ALL_TEXT, "high"), quotable=("agent", "readme")),
     rule("destructive-command", "Destructive command (wipes files or disks)",
          r"\brm\s+-(rf|fr)\s+(/|~|\$HOME)(\s|$|\")|\bmkfs\.\w+\s+/dev/|\bdd\s+if=/dev/(zero|u?random)\s+of=/dev/",
          {"config": "high", "script": "high", "agent": "medium", "readme": "medium", "workflow": "medium"},

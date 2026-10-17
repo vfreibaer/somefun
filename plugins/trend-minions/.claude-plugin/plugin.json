@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "trend-minions",
   "displayName": "Trend Minions",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, by language or topic, with security and prompt-injection risk scores and a safe-for-work (EU) check of every repo listed.",
   "author": {
     "name": "vfreibaer",
