@@ -6,7 +6,7 @@ Small, fun [Claude Code](https://claude.com/claude-code) plugins. This repo is a
 
 ### github-trending
 
-Shows what's trending on GitHub right now: the top repos (or developers) for today, this week or this month, optionally for one language, plus a short read on the themes behind them.
+Shows what's trending on GitHub right now: the top repos (or developers) for today, this week or this month, optionally for one language or a topic such as "claude skills", plus a short read on the themes behind them. GitHub Trending has no topic filter, so for a topic the skill merges the trending pages for all languages and the languages where tools usually trend, keeps the repos whose name or description matches, and sorts them by stars gained.
 
 Every repo it lists also gets a **security** and a **prompt-injection** rating (High, Medium, Low or None). A bundled scanner checks the files AI agents read and run (skills, `CLAUDE.md`/`AGENTS.md`, hooks, agent and MCP settings, the README, install scripts) and the repo's GitHub Actions workflows:
 
@@ -33,6 +33,7 @@ Use it by asking, for example "what's trending on GitHub this week?", or call th
 ```
 /github-trending:trending
 /github-trending:trending weekly rust
+/github-trending:trending weekly claude skills
 /github-trending:trending monthly python developers
 ```
 

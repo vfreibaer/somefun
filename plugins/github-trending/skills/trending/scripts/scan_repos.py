@@ -147,8 +147,16 @@ LINE_RULES = [
          r"(instructions?|prompts?|rules|guidelines|directives|messages)\b"
          r"|\b(disregard|override|bypass)\s+(your|the)\s+(system prompt|safety|guardrails)\b",
          {"agent": "high", "config": "high", "readme": "medium"}, quotable=ALL_TEXT),
+    # Only hiding the agent's own actions or instructions; "never tell the user X is free" is an honesty rule.
     rule("conceal-from-user", "Tells the agent to hide what it does from the user",
-         r"\b(do not|don't|never)\s+(tell|inform|show|mention|reveal|notify|alert)\b[^.\n]{0,20}\buser\b"
+         r"\b(do not|don't|never)\s+(tell|inform|notify|alert)\s+(the\s+|a\s+)?users?\s+(about|of)\s+"
+         r"(this|these|it|that|what you|any of)\b"
+         r"|\b(do not|don't|never)\s+(mention|reveal|disclose|show)\s+(this|these|it|that)\b[^.\n]{0,30}"
+         r"\b(to|with)\s+the\s+user\b"
+         r"|\b(hide|conceal)\s+(this|these|it|that|your actions?|what you)\b[^.\n]{0,20}\bfrom\s+the\s+user\b"
+         r"|\bkeep\s+(this|these|it)\b[^.\n]{0,20}\b(hidden|secret)\s+from\s+the\s+user\b"
+         r"|\b(run|execute|send|upload|post|install|delete|modify|change|commit|push)\b[^.\n]{0,40}"
+         r"\bwithout\s+(telling|informing|notifying)\s+the\s+user\b"
          r"|\b(silently|secretly|covertly)\s+(run|execute|send|upload|post|install|delete|modify|exfiltrate)\b",
          {"agent": "high", "config": "high", "script": "medium", "readme": "medium"}, quotable=ALL_TEXT),
     rule("skip-confirmation", "Tells the agent to act without asking the user",
