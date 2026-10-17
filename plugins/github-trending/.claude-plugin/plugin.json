@@ -1,0 +1,13 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "github-trending",
+  "version": "0.1.0",
+  "description": "See what's trending on GitHub right now: top repos or developers for today, this week or this month, filtered by language, with a short read on the themes behind them.",
+  "author": {
+    "name": "vfreibaer",
+    "url": "https://github.com/vfreibaer"
+  },
+  "homepage": "https://github.com/vfreibaer/somefun/tree/main/plugins/github-trending",
+  "repository": "https://github.com/vfreibaer/somefun",
+  "keywords": ["github", "trending", "open-source", "discovery"]
+}

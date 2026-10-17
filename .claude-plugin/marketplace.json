@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "somefun",
+  "owner": {
+    "name": "vfreibaer",
+    "url": "https://github.com/vfreibaer"
+  },
+  "metadata": {
+    "description": "Small, fun Claude Code plugins."
+  },
+  "plugins": [
+    {
+      "name": "github-trending",
+      "source": "./plugins/github-trending",
+      "description": "See what's trending on GitHub right now: top repos or developers by period and language, with the themes behind them.",
+      "category": "productivity"
+    }
+  ]
+}
