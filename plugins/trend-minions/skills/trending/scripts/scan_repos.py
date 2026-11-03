@@ -3,6 +3,8 @@
 
 Usage:
   scan_repos.py owner/repo [owner/repo ...]
+  scan_repos.py https://github.com/owner/repo[/blob/REF/PATH] ...
+                                               a file link scans just that file
   scan_repos.py --path DIR [--path DIR ...]    scan local checkouts
 
 For each repository it reports:
@@ -20,7 +22,8 @@ Only the files that matter are downloaded: the repository is cloned without
 file contents (a git partial clone) and just the selected files are fetched.
 File contents are never printed, only rule names and locations, so untrusted
 text from the scanned repository does not reach an agent's context. Pass
---snippets to add short, escaped excerpts for human review.
+--snippets to add short, escaped excerpts for human review. Files too large
+or binary to scan are listed as not scanned, never silently left out.
 
 Standard library only. Remote repositories need git on PATH.
 """
@@ -37,12 +40,18 @@ import subprocess
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import PurePosixPath
 
 SCORECARD_API = "https://api.securityscorecards.dev/projects/github.com/{}"
 SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._][A-Za-z0-9._-]*$")
-MAX_FILE_BYTES = 512 * 1024
+# A repo or file link: https://github.com/owner/name[.git][/blob/<ref>/<path>][?query][#fragment]
+GITHUB_LINK = re.compile(r"^https?://(?:www\.)?github\.com/([^/?#]+/[^/?#]+?)(?:\.git)?"
+                         r"(?:/blob/([^?#]+?))?/?(?:[?#].*)?$")
+# A ref from a link goes to git fetch: no options, ranges, reflog syntax or refspec colons.
+SAFE_REF = re.compile(r"^(?!-)(?!.*\.\.)[\w./-]+$")
+MAX_FILE_BYTES = 4 * 1024 * 1024
 MAX_FILES = 400
 SEVERITIES = ("high", "medium", "low")
 
@@ -356,19 +365,31 @@ def excerpt(text, match=None, width=80):
     return s if len(s) <= width else s[:width - 1] + "…"
 
 
-def scan_tree(root, files, snippets=False):
-    """Scan the selected (path, kind) files under root. Returns a list of findings."""
+def scan_tree(root, files, snippets=False, not_scanned=None):
+    """Scan the selected (path, kind) files under root. Returns a list of findings.
+
+    Files too large or binary to scan are appended to not_scanned as {"file", "reason"}.
+    """
+    def skip(rel, reason):
+        if not_scanned is not None:
+            not_scanned.append({"file": excerpt(rel, width=120), "reason": reason})
+
     grouped = {}
     for rel, kind in files:
         full = os.path.join(root, *PurePosixPath(rel).parts)
         try:
-            if os.path.islink(full) or not os.path.isfile(full) or os.path.getsize(full) > MAX_FILE_BYTES:
+            if os.path.islink(full) or not os.path.isfile(full):
+                continue
+            size = os.path.getsize(full)
+            if size > MAX_FILE_BYTES:
+                skip(rel, "too large: %.1f MB" % (size / 1024 / 1024))
                 continue
             with open(full, "rb") as f:
                 data = f.read()
         except OSError:
             continue
         if b"\0" in data[:8192]:
+            skip(rel, "binary")
             continue
         text = data.decode("utf-8", errors="replace")
         for rule_id, title, severity, number, line, m in scan_text(text, kind):
@@ -406,18 +427,66 @@ def run_git(args, cwd=None, timeout=120, stdin=None):
     return proc.stdout
 
 
-def fetch_remote(slug, dest, timeout):
-    """Partial-clone slug into dest and check out only the files worth scanning."""
-    run_git(["clone", "--quiet", "--depth", "1", "--filter=blob:none", "--no-checkout",
-             "--", "https://github.com/%s.git" % slug, dest], timeout=timeout)
-    listing = run_git(["ls-tree", "-r", "-z", "HEAD"], cwd=dest, timeout=timeout)
+def parse_target(target):
+    """Split owner/name or a github.com link into (slug, link).
+
+    link is the decoded part after /blob/ in a file link (ref and path, not yet split), else None.
+    """
+    m = GITHUB_LINK.match(target)
+    if not m:
+        return target, None
+    return m.group(1), urllib.parse.unquote(m.group(2)) if m.group(2) else None
+
+
+def ref_candidates(link):
+    """(ref, path) pairs for a file link, shortest ref first: refs can contain slashes."""
+    parts = link.split("/")
+    return [("/".join(parts[:i]), "/".join(parts[i:])) for i in range(1, len(parts))]
+
+
+def list_blobs(dest, commit, timeout):
+    listing = run_git(["ls-tree", "-r", "-z", commit], cwd=dest, timeout=timeout)
     blobs = {}
     for entry in listing.decode("utf-8", "replace").split("\0"):
         meta, _, path = entry.partition("\t")
         fields = meta.split()
         if len(fields) == 3 and fields[1] == "blob":
             blobs[path] = fields[2]
-    files, truncated = select_files(list(blobs))
+    return blobs
+
+
+def fetch_remote(slug, dest, timeout, link=None):
+    """Partial-clone slug into dest and check out only the files worth scanning.
+
+    With a file link, only that file (listed last) and the root license files are checked out.
+    """
+    run_git(["init", "--quiet", dest], timeout=timeout)
+    run_git(["remote", "add", "origin", "https://github.com/%s.git" % slug], cwd=dest, timeout=timeout)
+    # What git clone --filter sets up; older git refuses fetch --filter without it.
+    run_git(["config", "remote.origin.promisor", "true"], cwd=dest, timeout=timeout)
+    run_git(["config", "remote.origin.partialclonefilter", "blob:none"], cwd=dest, timeout=timeout)
+    for ref, wanted in ref_candidates(link) if link else [("HEAD", None)]:
+        if not SAFE_REF.match(ref):
+            continue
+        try:
+            run_git(["fetch", "--quiet", "--depth", "1", "--filter=blob:none", "--no-tags", "origin", ref],
+                    cwd=dest, timeout=timeout)
+        except RuntimeError:
+            if link:
+                continue  # not a ref; try a longer one
+            raise
+        commit = run_git(["rev-parse", "FETCH_HEAD"], cwd=dest, timeout=timeout).decode().strip()
+        blobs = list_blobs(dest, commit, timeout)
+        if wanted is None or wanted in blobs:
+            break
+    else:
+        raise RuntimeError("no such file on GitHub: %s" % excerpt(link, width=120))
+    if wanted is None:
+        files, truncated = select_files(list(blobs))
+    else:
+        files = [(p, "license") for p in blobs if classify(p) == "license" and p != wanted]
+        files.append((wanted, classify(wanted) or "agent"))
+        truncated = False
     if files:
         # Fetch all selected blobs in one request, as git's own lazy fetch does; a plain
         # checkout would fetch them one round trip at a time.
@@ -429,7 +498,7 @@ def fetch_remote(slug, dest, timeout):
         except RuntimeError:
             pass  # older git: the checkout below fetches lazily instead
         spec = "\0".join(path for path, _ in files).encode("utf-8") + b"\0"
-        run_git(["checkout", "HEAD", "--pathspec-from-file=-", "--pathspec-file-nul"],
+        run_git(["checkout", commit, "--pathspec-from-file=-", "--pathspec-file-nul"],
                 cwd=dest, timeout=timeout, stdin=spec)
     return list(blobs), files, truncated
 
@@ -500,10 +569,10 @@ def safe_check(target, local, args):
 
 
 def check(target, local, args):
-    slug = slug_from_checkout(target) if local else target
+    slug, link = (slug_from_checkout(target), None) if local else parse_target(target)
     result = {"repo": slug or target}
-    if not local and not SLUG_RE.match(target):
-        result["error"] = "not a GitHub owner/name"
+    if not local and not SLUG_RE.match(slug):
+        result["error"] = "not a GitHub owner/name or link"
         return result
     result["scorecard"] = scorecard(slug, args.timeout) if slug and not args.no_scorecard \
         else {"status": "skipped"}
@@ -516,8 +585,13 @@ def check(target, local, args):
         else:
             tmp = tempfile.mkdtemp(prefix="trend-minions-scan-")
             root = os.path.join(tmp, "repo")
-            paths, files, truncated = fetch_remote(slug, root, args.timeout)
-        findings = scan_tree(root, files, args.snippets)
+            paths, files, truncated = fetch_remote(slug, root, args.timeout, link)
+            if link:
+                result["file"] = excerpt(files[-1][0], width=120)
+        # License files have no rules; detect_license reads them below.
+        to_scan = [(path, kind) for path, kind in files if kind != "license"]
+        not_scanned = []
+        findings = scan_tree(root, to_scan, args.snippets, not_scanned)
         result["license"] = detect_license(root, [path for path, kind in files if kind == "license"])
     except (RuntimeError, OSError, subprocess.SubprocessError) as e:
         result["error"] = "could not fetch: %s" % e
@@ -525,7 +599,8 @@ def check(target, local, args):
     finally:
         if tmp:
             remove_tree(tmp)
-    result["files_scanned"] = sum(1 for _, kind in files if kind != "license")
+    result["files_scanned"] = len(to_scan) - len(not_scanned)
+    result["not_scanned"] = not_scanned
     result["truncated"] = truncated
     result["security_policy"] = any(p.lower() in SECURITY_POLICY_FILES for p in paths)
     for category in CATEGORIES:
@@ -633,7 +708,7 @@ def detect_license(root, license_files):
 def format_text(results):
     lines = []
     for r in results:
-        head = r["repo"]
+        head = r["repo"] + ("  " + r["file"] if "file" in r else "")
         if "error" in r:
             lines.append("%s  ERROR %s" % (head, r["error"]))
             continue
@@ -649,6 +724,8 @@ def format_text(results):
             head, score, "yes" if r["security_policy"] else "no", " OR ".join(lic["ids"]) or "none",
             {True: "yes", False: "no", "restricted": "restricted", None: "unknown"}[lic["commercial_use"]],
             r["files_scanned"], ", capped" if r["truncated"] else ""))
+        if r["not_scanned"]:
+            lines.append("  Not scanned: " + ", ".join("%s (%s)" % (n["file"], n["reason"]) for n in r["not_scanned"]))
         for category, label in (("security", "Security"), ("injection", "Prompt injection")):
             group = r[category]
             c = group["counts"]
@@ -667,7 +744,8 @@ def format_text(results):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("repos", nargs="*", help="GitHub repositories as owner/name")
+    parser.add_argument("repos", nargs="*",
+                        help="GitHub repositories as owner/name, or github.com repo or file links")
     parser.add_argument("--path", action="append", default=[], help="scan a local checkout (repeatable)")
     parser.add_argument("--format", choices=("json", "text"), default="json")
     parser.add_argument("--snippets", action="store_true", help="include short escaped excerpts")
@@ -679,7 +757,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     targets = [(r, False) for r in args.repos] + [(p, True) for p in args.path]
     if not targets:
-        parser.error("give at least one owner/name or --path")
+        parser.error("give at least one owner/name, GitHub link or --path")
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         results = list(pool.map(lambda t: safe_check(t[0], t[1], args), targets))
     if args.format == "json":

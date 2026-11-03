@@ -34,10 +34,13 @@ Use it by asking, for example "what's trending on GitHub this week?", or call th
 
 The plugin used to be called `github-trending`. If you installed it under that name, run `/plugin marketplace update somefun`, then `/plugin install trend-minions@somefun` once. Claude Code moves your settings from the old name to the new one by itself.
 
-You can also run the scanner on its own, on any repo or local checkout:
+To check one repo or file instead of the trending list, give the skill a link, such as `/trend-minions:trending https://github.com/owner/name/blob/main/AGENTS.md`.
+
+You can also run the scanner on its own, on any repo, file link or local checkout:
 
 ```
 python3 plugins/trend-minions/skills/trending/scripts/scan_repos.py --format text owner/name
+python3 plugins/trend-minions/skills/trending/scripts/scan_repos.py --format text https://github.com/owner/name/blob/main/AGENTS.md
 python3 plugins/trend-minions/skills/trending/scripts/scan_repos.py --format text --snippets --path ./some-checkout
 ```
 
